@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export excel</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>Export gradebook excel</h1>
+    <form id="convert-form">
+        <div class="form-group">
+            <label for="scoreType">Năm học:</label>
+            <select id="scoreType" name="scoreType" class="scoreType" onchange="populateSelectCourse(this)">
+                <option value="0">Chọn kì học</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="courseId">Môn học:</label>
+            <select id="courseId" name="courseId" class="courseId" onchange="populateSelectOptions(this)">
+                <option value="">Chọn môn học</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="componentScore">Điểm thành phần:</label>
+            <select id="componentScore" name="componentScore" class="placeholder">
+                <option value="">Chọn tên cột</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="finalScore">Điểm cuối kỳ:</label>
+            <select id="finalScore" name="finalScore" class="placeholder">
+                <option value="">Chọn tên cột</option>
+            </select>
+        </div>
+        <button type="submit">Export Gradebook Excel</button>
+    </form>
+
+    <script>
+        async function populateSelectTerms() {
+            try {
+                const response = await fetch(`/api/terms`);
+                console.log(response.body);
+                const data = await response.json();
+                const componentScoreSelect = document.getElementById('scoreType');
+                // console.log(data);
+
+                data.forEach((item) => {
+                    // if (item.published) {
+                    const optionComponent = document.createElement('option');
+                    optionComponent.value = item.id;
+                    optionComponent.textContent = item.name;
+                    componentScoreSelect.appendChild(optionComponent);
+                    // }
+                });
+            } catch (error) {
+                console.error('Error fetching columns:', error);
+                alert('Error fetching columns. Please try again.');
+            }
+        }
+
+        async function populateSelectCourse(selectElement) {
+            const term_id = selectElement.value;
+            const componentScoreSelect = document.getElementById('courseId');
+            componentScoreSelect.innerHTML = '<option value="">Chọn môn học</option>'
+            try {
+                if (term_id !== "") {
+                    const response = await fetch(`/api/courses`);
+                    const data = await response.json();
+                    data.forEach((item) => {
+                        if (item.enrollment_term_id == term_id) {
+                            const optionComponent = document.createElement('option');
+                            optionComponent.value = item.id;
+                            optionComponent.textContent = item.name;
+                            componentScoreSelect.appendChild(optionComponent);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching columns:', error);
+                alert('Error fetching columns. Please try again.');
+            }
+        }
+
+        async function populateSelectOptions(selectElement) {
+            const courseId = selectElement.value;
+            const componentScoreSelect = document.getElementById('componentScore');
+            const finalScoreSelect = document.getElementById('finalScore');
+            componentScoreSelect.innerHTML = '<option value="">Chọn tên cột</option>';
+            finalScoreSelect.innerHTML = '<option value="">Chọn tên cột</option>';
+            try {
+                if (courseId !== "") {
+                    const response = await fetch(`/api/courses/${courseId}/assignments`);
+                    const data = await response.json();
+                    data.forEach((item) => {
+                        if (item.published) {
+                            const optionComponent = document.createElement('option');
+                            optionComponent.value = item.id;
+                            optionComponent.textContent = item.name;
+                            componentScoreSelect.appendChild(optionComponent);
+
+                            const optionFinal = document.createElement('option');
+                            optionFinal.value = item.id;
+                            optionFinal.textContent = item.name;
+                            finalScoreSelect.appendChild(optionFinal);
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching columns:', error);
+                alert('Error fetching columns. Please try again.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            populateSelectTerms();
+        });
+
+
+        document.getElementById('convert-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const courseId = formData.get('courseId');
+            const scoreType = formData.get('scoreType');
+            const componentScore = formData.get('componentScore');
+            const finalScore = formData.get('finalScore');
+
+            try {
+                const response = await fetch('/export-excel', {
+                    method: 'POST',
+                    body: JSON.stringify({ courseId, scoreType, componentScore, finalScore }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const blob = await response.blob();
+
+                if (response.headers.get('Content-Type').includes('application/zip')) {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'converted_files.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                } else {
+                    const errorMessage = await blob.text();
+                    console.error('Error converting to Excel:', errorMessage);
+                    alert('Error converting to Excel. Please try again later.');
+                }
+            } catch (error) {
+                console.error('Error converting to Excel:', error);
+                alert('Error converting to Excel. Please try again later.');
+            }
+        });
+    </script>
+</body>
+
+</html>
