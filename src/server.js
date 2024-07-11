@@ -15,7 +15,7 @@ app.use(express.static(path.join(__dirname, "..", "public")));
 function roundToOneDecimalPlace(value) {
   if (value == null) return null;
   return parseFloat(value.toFixed(1));
-}l
+}
 
 async function fetchFromCanvas(apiUrl) {
   try {
@@ -35,15 +35,15 @@ async function fetchFromCanvas(apiUrl) {
 async function fetchPaginatedData(apiUrl) {
   let allData = [];
   let page = 1;
-
   while (true) {
-    if (apiUrl.endsWith('?')) {
-        apiUrl += `page=${page}`;
+    let apiUrlNew = apiUrl;
+    if (apiUrlNew.endsWith('?')) {
+      apiUrlNew += `page=${page}`;
     } else {
-        apiUrl += `&page=${page}`;
+      apiUrlNew += `&page=${page}`;
     }
-    console.log(apiUrl);
-    const data = await fetchFromCanvas(`${apiUrl}`);
+    console.log(apiUrlNew);
+    const data = await fetchFromCanvas(`${apiUrlNew}`);
     if (data.length === 0 || (Array.isArray(data.enrollment_terms) && data.enrollment_terms.length === 0)) {
         break;
     }
@@ -54,23 +54,24 @@ async function fetchPaginatedData(apiUrl) {
     }
     page++;
   }
+  // console.log("data: ", allData);
   return allData;
 }
 
 async function fetchAssignments(courseId, assignmentId) {
-  const apiUrl = `https://portal.uet.vnu.edu.vn/api/v1/courses/${courseId}/assignments/${assignmentId}/submissions?`;
+  const apiUrl = `${ip}/api/v1/courses/${courseId}/assignments/${assignmentId}/submissions?`;
   return fetchPaginatedData(apiUrl);
 }
 
 async function fetchStudents(courseId) {
-  const apiUrl = `https://portal.uet.vnu.edu.vn/api/v1/courses/${courseId}/users?enrollment_type[]=student`;
+  const apiUrl = `${ip}/api/v1/courses/${courseId}/users?enrollment_type[]=student`;
   return fetchPaginatedData(apiUrl);
 }
 
 // api canvas get all terms
 app.get("/api/terms", async (req, res) => {
     try {
-      const courses = await fetchPaginatedData("https://portal.uet.vnu.edu.vn/api/v1/accounts/1/terms?");
+      const courses = await fetchPaginatedData(`${ip}/api/v1/accounts/1/terms?`);
       res.json(courses);
     } catch (error) {
       res.status(500).json({ error: "Error fetching data" });
@@ -78,9 +79,10 @@ app.get("/api/terms", async (req, res) => {
 });
 
 // api canvas get all course
-app.get("/api/courses", async (req, res) => {
+app.get("/api/courses/:termId", async (req, res) => {
   try {
-    const courses = await fetchPaginatedData("https://portal.uet.vnu.edu.vn/api/v1/courses?");
+    const { termId } = req.params;
+    const courses = await fetchPaginatedData(`${ip}/api/v1/accounts/1/courses?enrollment_term_id=${termId}`);
     res.json(courses);
   } catch (error) {
     res.status(500).json({ error: "Error fetching data" });
@@ -91,7 +93,7 @@ app.get("/api/courses", async (req, res) => {
 app.get("/api/courses/:courseId/assignments", async (req, res) => {
   const { courseId } = req.params;
   try {
-    const assignments = await fetchPaginatedData(`https://portal.uet.vnu.edu.vn/api/v1/courses/${courseId}/assignments?`);
+    const assignments = await fetchPaginatedData(`${ip}/api/v1/courses/${courseId}/assignments?`);
     res.json(assignments);
   } catch (error) {
     res.status(500).json({ error: "Error fetching data" });

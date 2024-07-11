@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Export excel</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 </head>
 
 <body>
@@ -14,7 +17,7 @@
         <div class="form-group">
             <label for="scoreType">Năm học:</label>
             <select id="scoreType" name="scoreType" class="scoreType" onchange="populateSelectCourse(this)">
-                <option value="0">Chọn kì học</option>
+                <option value="">Chọn kì học</option>
             </select>
         </div>
         <div class="form-group">
@@ -39,10 +42,16 @@
     </form>
 
     <script>
+        $(document).ready(function() {
+            $('#scoreType').select2({ width: '100%' });
+            $('#courseId').select2({ width: '100%' });
+            $('#componentScore').select2({ width: '100%' });
+            $('#finalScore').select2({ width: '100%' });
+        });
+
         async function populateSelectTerms() {
             try {
                 const response = await fetch(`/api/terms`);
-                console.log(response.body);
                 const data = await response.json();
                 const componentScoreSelect = document.getElementById('scoreType');
                 // console.log(data);
@@ -67,15 +76,13 @@
             componentScoreSelect.innerHTML = '<option value="">Chọn môn học</option>'
             try {
                 if (term_id !== "") {
-                    const response = await fetch(`/api/courses`);
+                    const response = await fetch(`/api/courses/${term_id}`);
                     const data = await response.json();
                     data.forEach((item) => {
-                        if (item.enrollment_term_id == term_id) {
-                            const optionComponent = document.createElement('option');
-                            optionComponent.value = item.id;
-                            optionComponent.textContent = item.name;
-                            componentScoreSelect.appendChild(optionComponent);
-                        }
+                        const optionComponent = document.createElement('option');
+                        optionComponent.value = item.id;
+                        optionComponent.textContent = item.name;
+                        componentScoreSelect.appendChild(optionComponent);
                     });
                 }
             } catch (error) {
